@@ -1,9 +1,9 @@
-from fastapi import FastAPI, Form, File, UploadFile, Body
+from fastapi import FastAPI, Form, File, UploadFile, Body, Cookie
 from fastapi.routing import APIRoute
 from db.session import Session
 from settings import config
 from starlette.requests import Request
-from typing import Callable, List
+from typing import Callable, List, Optional
 # from api.v1 import test
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +12,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 import os
 from starlette.responses import RedirectResponse
+import datetime
+
 
 
 app = FastAPI(title=config.PROJECT_NAME, openapi_url="/api/v1/openapi.json", docs_url="/api/docs")
@@ -49,16 +51,21 @@ async def post_login(request: Request, username: str = Form(...), password: str=
     if username != 'admin' and password != '1q2w3e4r':
         return generate_html_response(400, "bad request!")
     else:
-        pass
+        rr = RedirectResponse('/', status_code=303)
+        rr.set_cookie(key="token", value='yes')
+        rr.set_cookie(key="expire", value= datetime.datetime.now() + datetime.timedelta(minutes=30))
+        return rr
     
 
 @app.get("/")
-async def get_home(request: Request):
-    return templates.TemplateResponse('main.html', context={'request': request})
-
-# @app.get("/scan")
-# async def get_home(request: Request):
-#     return templates.TemplateResponse('index.html', context={'request': request, 'result': 'select your file'})
+async def get_home(request: Request, token: Optional[str] = Cookie(None), expire: datetime = Cookie(None):
+    if token == 'yes':
+        if  expire < datetime.datetime.now():
+            return templates.TemplateResponse('go-to-login.html', context={'request': request})
+        else:
+            return templates.TemplateResponse('main.html', context={'request': request})
+    else:
+        return templates.TemplateResponse('go-to-login.html', context={'request': request})
 
 
 @app.post("/upload-file")
