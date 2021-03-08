@@ -1,0 +1,14 @@
+FastApi
+uvicorn
+sqlalchemy
+pydantic
+passlib
+bcrypt
+python-jose
+pycryptodome
+pymysql
+python-multipart
+alembic
+pyyaml
+aiofiles
+jinja2
