@@ -25,42 +25,50 @@ templates = Jinja2Templates(directory="templates/")
 # Router config
 # app.include_router(test.route, prefix="/api/v1/test", tags=["Test"])
 
-def generate_html_response(status, content):
-    html_content = """
-    <html>
-        <head>
-            <title>Some HTML in here</title>
-        </head>
-        <body>
-            <h1>Status: {status}</h1>
-            <h1>Content: {content}</h1>
+# def generate_html_response(status, content):
+#     html_content = """
+#     <html>
+#         <head>
+#             <title>Some HTML in here</title>
+#         </head>
+#         <body>
+#             <h1>Status: {status}</h1>
+#             <h1>Content: {content}</h1>
 
-        </body>
-    </html>
-    """.format(status = status, content = content)
-    return HTMLResponse(content=html_content, status_code=status)
+#         </body>
+#     </html>
+#     """.format(status = status, content = content)
+#     return HTMLResponse(content=html_content, status_code=status)
 
 
 @app.get("/login")
-async def login(request: Request):
-    return templates.TemplateResponse('login.html', context={'request': request})
+async def login(request: Request, token: Optional[str] = Cookie(None), expire = Cookie(None)):
+    if token == 'yes':
+        if expire == None or datetime.datetime.strptime(expire, '%y/%m/%d %H:%M:%S') < datetime.datetime.now():
+            return templates.TemplateResponse('login.html', context={'request': request})
+        else:
+            rr = RedirectResponse('/', status_code=303)
+            return rr
+    else:
+        return templates.TemplateResponse('login.html', context={'request': request})
 
 
 @app.post("/login")
 async def post_login(request: Request, username: str = Form(...), password: str= Form(...)):
     if username != 'admin' and password != '1q2w3e4r':
-        return generate_html_response(400, "bad request!")
+        templates.TemplateResponse('login.html', context={'request': request})
     else:
         rr = RedirectResponse('/', status_code=303)
         rr.set_cookie(key="token", value='yes')
-        rr.set_cookie(key="expire", value= datetime.datetime.now() + datetime.timedelta(minutes=30))
+        rr.set_cookie(key="expire", value= str((datetime.datetime.now() \
+            + datetime.timedelta(minutes=30)).strftime('%y/%m/%d %H:%M:%S')))
         return rr
     
 
 @app.get("/")
-async def get_home(request: Request, token: Optional[str] = Cookie(None), expire: datetime = Cookie(None):
+async def get_home(request: Request, token: Optional[str] = Cookie(None), expire = Cookie(None)):
     if token == 'yes':
-        if  expire < datetime.datetime.now():
+        if expire == None or datetime.datetime.strptime(expire, '%y/%m/%d %H:%M:%S') < datetime.datetime.now():
             return templates.TemplateResponse('go-to-login.html', context={'request': request})
         else:
             return templates.TemplateResponse('main.html', context={'request': request})
